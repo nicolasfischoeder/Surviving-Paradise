@@ -13,6 +13,7 @@ class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
 struct FInputActionValue;
+class ASimpleCubeActor;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -42,8 +43,16 @@ class ASurvivingParadise1Character : public ACharacter
 	UInputAction* MoveAction;
 
 	/** Look Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LookAction;
+        UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+        class UInputAction* LookAction;
+
+       /** Action to spawn a cube */
+       UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+       UInputAction* SpawnCubeAction;
+
+       /** Mapping context for spawning cube */
+       UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+       UInputMappingContext* SpawnCubeMappingContext;
 	
 public:
 	ASurvivingParadise1Character();
@@ -53,7 +62,10 @@ protected:
 	void Move(const FInputActionValue& Value);
 
 	/** Called for looking input */
-	void Look(const FInputActionValue& Value);
+        void Look(const FInputActionValue& Value);
+
+        /** Spawns a cube actor */
+        void SpawnCube(const FInputActionValue& Value);
 
 protected:
 	// APawn interface

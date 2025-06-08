@@ -10,6 +10,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
+#include "SimpleCubeActor.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -33,7 +36,8 @@ ASurvivingParadise1Character::ASurvivingParadise1Character()
 	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
 	Mesh1P->bCastDynamicShadow = false;
 	Mesh1P->CastShadow = false;
-	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+    Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+
 
 }
 
@@ -46,10 +50,14 @@ void ASurvivingParadise1Character::NotifyControllerChanged()
 	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
+                if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+                {
+                        Subsystem->AddMappingContext(DefaultMappingContext, 0);
+                        if (SpawnCubeMappingContext)
+                        {
+                                Subsystem->AddMappingContext(SpawnCubeMappingContext, 0);
+                        }
+                }
 	}
 }
 
@@ -65,8 +73,14 @@ void ASurvivingParadise1Character::SetupPlayerInputComponent(UInputComponent* Pl
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASurvivingParadise1Character::Move);
 
-		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASurvivingParadise1Character::Look);
+                // Looking
+                EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASurvivingParadise1Character::Look);
+
+                // Spawn cube if action is set
+                if (SpawnCubeAction)
+                {
+                        EnhancedInputComponent->BindAction(SpawnCubeAction, ETriggerEvent::Started, this, &ASurvivingParadise1Character::SpawnCube);
+                }
 	}
 	else
 	{
@@ -99,4 +113,16 @@ void ASurvivingParadise1Character::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ASurvivingParadise1Character::SpawnCube(const FInputActionValue& Value)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 200.f;
+    World->SpawnActor<ASimpleCubeActor>(SpawnLocation, FRotator::ZeroRotator);
 }
