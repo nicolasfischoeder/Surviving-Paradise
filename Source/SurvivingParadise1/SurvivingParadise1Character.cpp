@@ -13,6 +13,8 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "SimpleCubeActor.h"
+#include "GhostCubeActor.h"
+#include "DrawDebugHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -81,6 +83,21 @@ void ASurvivingParadise1Character::SetupPlayerInputComponent(UInputComponent* Pl
                 {
                         EnhancedInputComponent->BindAction(SpawnCubeAction, ETriggerEvent::Started, this, &ASurvivingParadise1Character::SpawnCube);
                 }
+
+                if (StartPlacementAction)
+                {
+                        EnhancedInputComponent->BindAction(StartPlacementAction, ETriggerEvent::Started, this, &ASurvivingParadise1Character::StartPlacement);
+                }
+
+                if (ConfirmPlacementAction)
+                {
+                        EnhancedInputComponent->BindAction(ConfirmPlacementAction, ETriggerEvent::Started, this, &ASurvivingParadise1Character::ConfirmPlacement);
+                }
+
+                if (RotatePlacementAction)
+                {
+                        EnhancedInputComponent->BindAction(RotatePlacementAction, ETriggerEvent::Started, this, &ASurvivingParadise1Character::RotatePlacement);
+                }
 	}
 	else
 	{
@@ -125,4 +142,77 @@ void ASurvivingParadise1Character::SpawnCube(const FInputActionValue& Value)
 
     FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 200.f;
     World->SpawnActor<ASimpleCubeActor>(SpawnLocation, FRotator::ZeroRotator);
+}
+
+void ASurvivingParadise1Character::StartPlacement(const FInputActionValue& Value)
+{
+    if (PlacementGhost)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    const FVector SpawnLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * PlacementDistance;
+    PlacementGhost = World->SpawnActor<AGhostCubeActor>(SpawnLocation, FRotator::ZeroRotator);
+    UpdatePlacementGhost();
+}
+
+void ASurvivingParadise1Character::RotatePlacement(const FInputActionValue& Value)
+{
+    if (!PlacementGhost)
+    {
+        return;
+    }
+
+    PlacementGhost->AddActorWorldRotation(FRotator(0.f, RotationStep, 0.f));
+}
+
+void ASurvivingParadise1Character::ConfirmPlacement(const FInputActionValue& Value)
+{
+    if (!PlacementGhost)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        World->SpawnActor<ASimpleCubeActor>(PlacementGhost->GetActorLocation(), PlacementGhost->GetActorRotation());
+    }
+
+    PlacementGhost->Destroy();
+    PlacementGhost = nullptr;
+}
+
+void ASurvivingParadise1Character::UpdatePlacementGhost()
+{
+    if (!PlacementGhost)
+    {
+        return;
+    }
+
+    const FVector Start = FirstPersonCameraComponent->GetComponentLocation();
+    const FVector End = Start + FirstPersonCameraComponent->GetForwardVector() * PlacementDistance;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(TEXT("PlacementTrace"), false, this);
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+    {
+        PlacementGhost->SetActorLocation(Hit.Location);
+    }
+    else
+    {
+        PlacementGhost->SetActorLocation(End);
+    }
+}
+
+void ASurvivingParadise1Character::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+    UpdatePlacementGhost();
 }
